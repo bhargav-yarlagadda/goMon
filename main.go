@@ -2,79 +2,76 @@ package main
 
 import (
 	"fmt"
-	"path/filepath"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"time"
+
 	"github.com/bhargav-yarlagadda/goMon/watcher"
 )
 
+var currentCommand *exec.Cmd // Global variable to hold the current command being executed
+
 // runApp restarts the application by killing the current running process and starting a new one.
 func runApp(args []string) {
-	// Check if there's an existing process and kill it before starting a new one.
+	// Kill current process if running
 	if currentCommand != nil && currentCommand.Process != nil {
 		fmt.Println("Restarting the server")
-		currentCommand.Process.Kill() // Kill the current server process
+		currentCommand.Process.Kill()
 	}
-
-	// Create a new command to run the server with the provided arguments.
-	currentCommand = exec.Command("go", args...)
-	// Set the standard output, input, and error for the command to be the same as the terminal.
+	// Prepare "go run ..." command using args[2:]
+	goArgs := append([]string{"run"}, args[2:]...)
+	currentCommand = exec.Command("go", goArgs...)
 	currentCommand.Stdout = os.Stdout
 	currentCommand.Stdin = os.Stdin
 	currentCommand.Stderr = os.Stderr
-	// Inherit environment variables from the current process.
 	currentCommand.Env = os.Environ()
 
-	// Run the new command asynchronously.
+	// Run the new command asynchronously
+	 
 	go func() {
-		// Run the command and handle any errors that occur.
 		if err := currentCommand.Run(); err != nil {
-			fmt.Println("Error in restarting the server: ", err)
+			fmt.Println("Error in restarting the server:", err)
 		}
 	}()
 }
 
-var currentCommand *exec.Cmd // Global variable to hold the current command being executed
-
 // main is the entry point of the application.
 func main() {
-	// Parse the arguments passed to the program
-	args := os.Args[1:]
+	args := os.Args
+	fmt.Println("Starting the server with arguments:", args)
 
-	// Validate the arguments to ensure that the command is in the correct format.
-	if len(args) < 2 || args[0] != "run" {
+	// Validate the format: gomon run <file.go> [args...]
+	if len(args) < 3 || args[1] != "run" {
 		fmt.Println("Usage: gomon run <your_file.go> [args...]")
 		os.Exit(1)
 	}
 
-	// Extract the file names to run. This skips the "run" argument and gets the remaining files.
+	// Extract the Go files to run (skip "gomon" and "run")
 	filesToRun := args[2:]
 	absPaths := []string{}
 
-	// Convert relative file paths to absolute paths to ensure the watcher is monitoring the correct directories.
+	// Convert relative file paths to absolute directories
 	for _, f := range filesToRun {
-		abs, err := filepath.Abs(f) // Get the absolute path of each file
+		abs, err := filepath.Abs(f)
 		if err != nil {
 			fmt.Println("Error resolving path:", err)
 			os.Exit(1)
 		}
-		absPaths = append(absPaths, filepath.Dir(abs)) // Append the directory part of the absolute path
+		absPaths = append(absPaths, filepath.Dir(abs))
 	}
 
-	// Start the application by calling runApp with the arguments.
+	// Start the app
 	runApp(args)
 
-	// Initialize the watcher with the directories to watch and the polling interval.
+	// Initialize the watcher
 	w := watcher.New(absPaths, 1*time.Second, func(path string) {
-		// When a change is detected, print the path and restart the app.
 		fmt.Printf(">>> Change detected: %s\n", path)
-		runApp(args) // Restart the app with the same arguments
+		runApp(args)
 	})
 
-	// Start the watcher to monitor file changes.
+	// Start watching
 	if err := w.Start(); err != nil {
-		// Handle any errors that occur during the watcher startup.
 		fmt.Println("Watcher error:", err)
 		os.Exit(1)
 	}
