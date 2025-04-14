@@ -1,14 +1,15 @@
 package watcher
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 )
 
+
 // New creates a new Watcher instance.
-// Takes a list of directories to monitor, polling interval, and a callback function.
 func New(paths []string, interval time.Duration, onChange func(path string)) *Watcher {
 	return &Watcher{
 		Paths:        paths,
@@ -18,8 +19,7 @@ func New(paths []string, interval time.Duration, onChange func(path string)) *Wa
 	}
 }
 
-// Start begins the file watcher.
-// Continuously checks for file changes and triggers the onChange callback.
+// Start begins the file watcher and continuously checks for file changes.
 func (w *Watcher) Start() error {
 	// Initial scan
 	if err := w.scan(); err != nil {
@@ -78,10 +78,7 @@ func (w *Watcher) detectChanges() ([]string, error) {
 
 	// Walk directories again and check for changes
 	for _, root := range w.Paths {
-		// filepath.Walk traverses every directory and file and calls the callback on each file
 		err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-			// os.FileInfo is an interface from Go’s os package that provides metadata about a file or directory.
-
 			if err != nil {
 				return err
 			}
@@ -110,6 +107,7 @@ func (w *Watcher) detectChanges() ([]string, error) {
 		if !seen[path] {
 			delete(w.Files, path) // Remove from tracked files
 			changed = append(changed, path) // Treat as a change
+			fmt.Printf("File deleted: %s\n", path)
 		}
 	}
 
