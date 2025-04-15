@@ -5,17 +5,20 @@ import (
 	"os"
 	"os/exec"
 	"sync"
+	"time"
+	"github.com/bhargav-yarlagadda/goMon/watcher"
 )
 
-var currentCommand *exec.Cmd // Global variable to hold the current command being executed
-var cmdMutex sync.Mutex      // Mutex to protect currentCommand
+var currentCommand *exec.Cmd   // Global variable to hold the current command being executed
+var cmdMutex sync.Mutex        // Mutex to protect currentCommand
 
-// killProcess function to kill the process in a goroutine
+// killProcess kills the currently running process, if any
 func killProcess(wg *sync.WaitGroup) {
 	defer wg.Done() // Decrement the counter when the goroutine completes
 
 	cmdMutex.Lock()
 	defer cmdMutex.Unlock()
+	
 
 	if currentCommand != nil && currentCommand.Process != nil {
 		fmt.Println("Attempting to kill the current server process")
@@ -28,16 +31,14 @@ func killProcess(wg *sync.WaitGroup) {
 	}
 }
 
-// runApp restarts the application by killing the current running process and starting a new one.
-func runApp(args []string, wg *sync.WaitGroup) {
-	// Deploy a goroutine to handle killing the current process
-	wg.Add(1) // Increment the counter before the goroutine starts
-	go killProcess(wg)
+// startProcess starts a new process to run the Go application
+func startProcess(args []string, wg *sync.WaitGroup) {
+	defer wg.Done() // Decrement the counter when the goroutine completes
 
-	// Create a new command to run the server
 	cmdMutex.Lock()
 	defer cmdMutex.Unlock()
 
+	// Create a new command to run the Go application
 	currentCommand = exec.Command("go", args[1:]...)
 	currentCommand.Stdout = os.Stdout
 	currentCommand.Stdin = os.Stdin
@@ -45,17 +46,28 @@ func runApp(args []string, wg *sync.WaitGroup) {
 	currentCommand.Env = os.Environ()
 
 	// Run the new command asynchronously
-	wg.Add(1) // Increment the counter for the new goroutine
-	go func(cmd *exec.Cmd, wg *sync.WaitGroup) {
-		defer wg.Done() // Decrement the counter when the goroutine completes
-		err := cmd.Run()
+	go func() {
+		err := currentCommand.Run()
 		if err != nil {
-			fmt.Println("Error in restarting the server:", err)
+			fmt.Println("Error in restarting the server:", err.Error())
 		}
-	}(currentCommand, wg)
+	}()
 }
 
-// main is the entry point of the application.
+
+// runApp restarts the application by killing the current running process and starting a new one
+func runApp(args []string, wg *sync.WaitGroup) {
+	// Kill the current process and start a new one
+	wg.Add(2) // Add two goroutines to the WaitGroup (one for killing and one for starting)
+
+	// Kill the current process
+	go killProcess(wg)
+
+	// Start the new process
+	go startProcess(args, wg)
+}
+
+// main is the entry point of the application
 func main() {
 	args := os.Args
 	fmt.Println("Starting the server with arguments:", args)
@@ -71,6 +83,18 @@ func main() {
 
 	// Start the app
 	runApp(args, &wg)
+
+	// Initialize the watcher
+	w := watcher.New([]string{"."}, 1*time.Second, func(path string) {
+		fmt.Printf(">>> Change detected: %s\n", path)
+		runApp(args, &wg)
+	})
+
+	// Start watching
+	if err := w.Start(); err != nil {
+		fmt.Println("Watcher error:", err)
+		os.Exit(1)
+	}
 
 	// Wait for all goroutines to finish before exiting the program
 	wg.Wait()

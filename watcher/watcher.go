@@ -19,6 +19,7 @@ func New(paths []string, interval time.Duration, onChange func(path string)) *Wa
 	}
 }
 
+
 // Start begins the file watcher and continuously checks for file changes.
 func (w *Watcher) Start() error {
 	// Initial scan
