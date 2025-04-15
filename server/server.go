@@ -1,5 +1,18 @@
-package server 
-func serve(){
+package main
+
+import "fmt"
+
+
+func main() {
+	fmt.Println("hi")
+
+
+
+
 
 }
+
+
+
+
 
