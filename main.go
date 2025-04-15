@@ -4,36 +4,55 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"time"
-
-	"github.com/bhargav-yarlagadda/goMon/watcher"
+	"sync"
 )
 
 var currentCommand *exec.Cmd // Global variable to hold the current command being executed
+var cmdMutex sync.Mutex      // Mutex to protect currentCommand
+
+// killProcess function to kill the process in a goroutine
+func killProcess(wg *sync.WaitGroup) {
+	defer wg.Done() // Decrement the counter when the goroutine completes
+
+	cmdMutex.Lock()
+	defer cmdMutex.Unlock()
+
+	if currentCommand != nil && currentCommand.Process != nil {
+		fmt.Println("Attempting to kill the current server process")
+		err := currentCommand.Process.Kill()
+		if err != nil {
+			fmt.Println("Failed to kill the existing process:", err)
+		} else {
+			fmt.Println("Successfully killed the existing process")
+		}
+	}
+}
 
 // runApp restarts the application by killing the current running process and starting a new one.
-func runApp(args []string) {
-	// Kill current process if running
-	if currentCommand != nil && currentCommand.Process != nil {
-		fmt.Println("Restarting the server")
-		currentCommand.Process.Kill()
-	}
-	// Prepare "go run ..." command using args[2:]
-	goArgs := append([]string{"run"}, args[2:]...)
-	currentCommand = exec.Command("go", goArgs...)
+func runApp(args []string, wg *sync.WaitGroup) {
+	// Deploy a goroutine to handle killing the current process
+	wg.Add(1) // Increment the counter before the goroutine starts
+	go killProcess(wg)
+
+	// Create a new command to run the server
+	cmdMutex.Lock()
+	defer cmdMutex.Unlock()
+
+	currentCommand = exec.Command("go", args[1:]...)
 	currentCommand.Stdout = os.Stdout
 	currentCommand.Stdin = os.Stdin
 	currentCommand.Stderr = os.Stderr
 	currentCommand.Env = os.Environ()
 
 	// Run the new command asynchronously
-	 
-	go func() {
-		if err := currentCommand.Run(); err != nil {
+	wg.Add(1) // Increment the counter for the new goroutine
+	go func(cmd *exec.Cmd, wg *sync.WaitGroup) {
+		defer wg.Done() // Decrement the counter when the goroutine completes
+		err := cmd.Run()
+		if err != nil {
 			fmt.Println("Error in restarting the server:", err)
 		}
-	}()
+	}(currentCommand, wg)
 }
 
 // main is the entry point of the application.
@@ -47,32 +66,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Extract the Go files to run (skip "gomon" and "run")
-	filesToRun := args[2:]
-	absPaths := []string{}
-
-	// Convert relative file paths to absolute directories
-	for _, f := range filesToRun {
-		abs, err := filepath.Abs(f)
-		if err != nil {
-			fmt.Println("Error resolving path:", err)
-			os.Exit(1)
-		}
-		absPaths = append(absPaths, filepath.Dir(abs))
-	}
+	// Create a WaitGroup to wait for the goroutines to finish
+	var wg sync.WaitGroup
 
 	// Start the app
-	runApp(args)
+	runApp(args, &wg)
 
-	// Initialize the watcher
-	w := watcher.New(absPaths, 1*time.Second, func(path string) {
-		fmt.Printf(">>> Change detected: %s\n", path)
-		runApp(args)
-	})
-
-	// Start watching
-	if err := w.Start(); err != nil {
-		fmt.Println("Watcher error:", err)
-		os.Exit(1)
-	}
+	// Wait for all goroutines to finish before exiting the program
+	wg.Wait()
 }
