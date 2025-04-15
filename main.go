@@ -79,13 +79,47 @@ func debounceRestart(args []string, path string) {
 
 func main() {
 	args := os.Args
-	fmt.Println("Starting the server with arguments:", args)
 
-	if len(args) < 3 || args[1] != "run" {
-		fmt.Println("Usage: gomon run <your_file.go> [args...]")
+	if args[1]=="--help" || args[1] == "" {
+		fmt.Print(`
+Gomon - A Go hot-reload tool for seamless development
+
+Usage:
+  gomon run <your_file.go> [args...]
+
+Description:
+  Watches for changes in .go files in the current directory and restarts the app automatically.
+
+Example:
+  gomon run main.go
+  gomon run server/server.go
+
+Note:
+  This tool is currently using polling to detect file changes and may be inefficient for large directories.
+`)
+	}
+	 if len(args) < 3 || args[1] != "run" {
+		fmt.Print(`				
+		Invalid command.
+		Usage:
+		gomon run <your_file.go> 
+
+		Description:
+		Starts your Go application and watches for changes in .go files.
+		On any change, the application will be rebuilt and restarted automatically.
+
+		Example:
+		gomon run server/main.go
+		gomon run cmd/app.go --port=8080
+
+		Tip:
+		Use this tool during development to avoid restarting your server manually.
+		`)
+
 		os.Exit(1)
 	}
 
+	fmt.Println("Starting the server with arguments:", args)
 	runApp(args)
 
 	// Watcher with debounce logic
