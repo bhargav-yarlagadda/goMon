@@ -70,7 +70,7 @@ func debounceRestart(args []string, path string) {
 		debounceTimer.Stop()
 	}
 
-	// Debounce interval: 500ms
+	// Debounce interval: 500ms,debounce is actually cancelling previous call  need to merge calls.
 	debounceTimer = time.AfterFunc(500*time.Millisecond, func() {
 		fmt.Printf(">>> Change detected: %s\n", path)
 		runApp(args)
@@ -87,8 +87,9 @@ Gomon - A Go hot-reload tool for seamless development
 Usage:
   gomon run <your_file.go> [args...]
 
+
 Description:
-  Watches for changes in .go files in the current directory and restarts the app automatically.
+  Watches for changes in go  files in the current directory and restarts the app automatically.
 
 Example:
   gomon run main.go
