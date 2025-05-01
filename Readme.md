@@ -6,6 +6,7 @@
 
 ---
 
+
 ## ✨ Features
 
 - ✅ Automatically detects changes in `.go` files
@@ -27,6 +28,7 @@
 1. Open your terminal and run:
    ```bash
    go install github.com/bhargav-yarlagadda/goMon@latest
+   
    ```
 
 2. Once installed, ensure it's available globally:
