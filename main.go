@@ -36,6 +36,7 @@ func killProcess() {
 				fmt.Println("Error killing process:", err)
 			}
 		} else {
+			// sending signal interrupt to the current proccess(similar to ctrl+c)
 			if err := currentCommand.Process.Signal(syscall.SIGINT); err != nil {
 				fmt.Println("Error sending SIGINT:", err)
 			}
