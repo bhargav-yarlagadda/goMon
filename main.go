@@ -53,7 +53,7 @@ func runApp(args []string) {
 		defer wg.Done()
 		killProcess()
 	}()
-
+	time.Sleep(1*time.Second)
 	go func() {
 		defer wg.Done()
 		startProcess(args)
@@ -70,10 +70,10 @@ func debounceRestart(args []string, path string) {
 		debounceTimer.Stop()
 	}
 
-	// Debounce interval: 500ms
 	debounceTimer = time.AfterFunc(500*time.Millisecond, func() {
 		fmt.Printf(">>> Change detected: %s\n", path)
 		runApp(args)
+	// Debounce interval: 500ms
 	})
 }
 
