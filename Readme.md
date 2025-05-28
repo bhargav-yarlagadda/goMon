@@ -30,7 +30,21 @@
    go install github.com/bhargav-yarlagadda/goMon@latest
    
    ```
-   on macos, add export PATH="$HOME/go/bin:$PATH" to your zshrc to make gomon globally accessible.
+   To make `gomon` globally accessible on **macOS**, follow these steps:
+   
+   1. Open your terminal.
+   
+   2. Add the following line to your `.zshrc` file:
+   
+       ```sh
+       export PATH="$HOME/go/bin:$PATH"
+       ```
+
+3. Save the file and apply the changes by running:
+
+    ```sh
+    source ~/.zshrc
+    ```
 2. Once installed, ensure it's available globally:
    ```bash
    gomon 
