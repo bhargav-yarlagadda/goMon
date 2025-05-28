@@ -40,11 +40,11 @@
        export PATH="$HOME/go/bin:$PATH"
        ```
 
-3. Save the file and apply the changes by running:
-
-    ```sh
-    source ~/.zshrc
-    ```
+   3. Save the file and apply the changes by running:
+   
+       ```sh
+       source ~/.zshrc
+       ```
 2. Once installed, ensure it's available globally:
    ```bash
    gomon 
