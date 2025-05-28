@@ -30,7 +30,7 @@
    go install github.com/bhargav-yarlagadda/goMon@latest
    
    ```
-
+   on macos, add export PATH="$HOME/go/bin:$PATH" to your zshrc to make gomon globally accessible.
 2. Once installed, ensure it's available globally:
    ```bash
    gomon 
